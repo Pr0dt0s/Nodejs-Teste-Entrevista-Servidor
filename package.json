@@ -1,0 +1,18 @@
+{
+  "name": "nodejs_test",
+  "version": "0.1.0",
+  "description": "nodejs test for work application",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pedro Reyes",
+  "license": "ISC",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.16.4",
+    "expressjs": "^1.0.1",
+    "mysql": "^2.17.1",
+    "xlsx": "^0.14.3"
+  }
+}
