@@ -7,7 +7,8 @@ const config = {
     username: 'user_test',
     password: 'P@ssw0rd',
     database_name: 'test_db',
-    table_name: 'base'
+    table_name: 'base',
+    omit_null:true
 }
 
 module.exports = config;
