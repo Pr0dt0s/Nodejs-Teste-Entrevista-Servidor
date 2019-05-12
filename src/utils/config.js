@@ -1,6 +1,7 @@
 let config = {
     //ENV
     port: 3000,
+    filename: './src/db/test.xlsx',
     //MySQL
     hostname: 'localhost',
     mysql_port: '3306',
