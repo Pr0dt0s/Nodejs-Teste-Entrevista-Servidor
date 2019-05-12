@@ -1,6 +1,6 @@
 const {
-    pool,
-    schema,
+    get_pool,
+    get_schema,
     Mock_Database,
 } = require('./db');
 const config = require('../utils/config');
@@ -40,7 +40,7 @@ async function readXLSX() {
             resolve(XLSX.read(file));
         });
         let data = await new Promise((resolve) => {
-            console.log('Converting xlsx fileto json ...');
+            console.log('Parsing xlsx file to json ...');
             let shetname = workbook.SheetNames[0];
             resolve(XLSX.utils.sheet_to_json(workbook.Sheets[shetname], {
                 defval: null,
@@ -97,7 +97,7 @@ async function readXLSX() {
 async function checkOrCreateDatabase() {
     try {
         let database_found = false;
-
+        let schema = get_schema();
         let result = await schema.query(`SHOW DATABASES LIKE '${config.database_name}'`);
 
         database_found = result.length === 1;
@@ -118,6 +118,7 @@ async function checkOrCreateDatabase() {
 }
 
 async function seedTable(force) {
+    let pool = get_pool();
     try {
         let table_found = await pool.query(`SHOW TABLES LIKE '${config.table_name}'`)
             .then(result => result.length === 1);
@@ -159,7 +160,6 @@ async function seedTable(force) {
     }
 
     //Seed
-    //append uuid to rows;
 
     let insert_query_s = `INSERT INTO ${config.table_name} (uuid`;
 

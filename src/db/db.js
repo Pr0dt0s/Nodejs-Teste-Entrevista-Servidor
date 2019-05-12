@@ -2,18 +2,36 @@ const mysql = require('promise-mysql');
 const config = require('../utils/config');
 const Parser = require('flora-sql-parser').Parser;
 
-const schema = mysql.createPool({
-    host: config.hostname,
-    user: config.username,
-    password: config.password,
-});
+let schema = null;
 
-const pool = mysql.createPool({
-    host: config.hostname,
-    user: config.username,
-    password: config.password,
-    database: config.database_name,
-});
+function get_schema() {
+    if (schema) {
+        schema.end();
+    }
+    schema = mysql.createPool({
+        host: config.hostname,
+        port: config.mysql_port,
+        user: config.username,
+        password: config.password,
+    });
+    return schema;
+}
+
+let pool = null;
+
+function get_pool() {
+    if (pool) {
+        pool.end();
+    }
+    pool = mysql.createPool({
+        host: config.hostname,
+        port: config.mysql_port,
+        user: config.username,
+        password: config.password,
+        database: config.database_name,
+    });
+    return pool;
+}
 
 let useMockDB = false;
 
@@ -60,16 +78,26 @@ const Mock_Database = {
     },
 };
 
+let current_config = {};
+
 function query(args) {
     if (useMockDB) {
         return Mock_Database.query(args);
     }
-    return pool.query(args);
+    let db = pool;
+    // if config changed reload pool and update config
+    if (JSON.stringify(current_config) !== JSON.stringify(config)) {
+        db = get_pool();
+        current_config = {
+            ...config,
+        };
+    }
+    return db.query(args);
 }
 
 module.exports = {
-    schema,
-    pool,
+    get_schema,
+    get_pool,
     query,
     Mock_Database,
 };
