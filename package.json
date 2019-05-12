@@ -2,7 +2,7 @@
   "name": "nodejs_test",
   "version": "0.1.0",
   "description": "nodejs test for work application",
-  "main": "index.js",
+  "main": "./src/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,10 +11,14 @@
   "dependencies": {
     "compression": "^1.7.4",
     "express": "^4.16.4",
-    "expressjs": "^1.0.1",
     "mysql": "^2.17.1",
+    "promise-mysql": "^3.3.1",
     "rxjs": "^6.5.2",
+    "@types/bluebird": "3.5.26",
     "uuid": "^3.3.2",
     "xlsx": "^0.14.3"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0"
   }
 }

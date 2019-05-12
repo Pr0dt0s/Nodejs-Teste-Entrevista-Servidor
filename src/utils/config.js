@@ -8,7 +8,8 @@ const config = {
     password: 'P@ssw0rd',
     database_name: 'test_db',
     table_name: 'base',
-    omit_null:true
+    replace_null:false,      //if true replaces null with 0
+    omit_null:false          
 }
 
 module.exports = config;
