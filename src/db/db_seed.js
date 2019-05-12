@@ -30,7 +30,7 @@ async function readXLSX() {
     try {
         let file = await new Promise((resolve, reject) => {
             console.log('Reading file, this can take a while ...');
-            fs.readFile('./src/db/test.xlsx', (err, result) => {
+            fs.readFile(config.filename, (err, result) => {
                 if (err) reject(err);
                 else resolve(result);
             });
