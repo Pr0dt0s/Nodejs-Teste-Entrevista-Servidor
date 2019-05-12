@@ -1,10 +1,11 @@
 const {
     pool,
-    schema
-} = require('../db/db');
+    schema,
+    Mock_Database,
+} = require('./db');
 const config = require('../utils/config');
 const uf_to_state = require('../utils/uf_to_state');
-const append_uuid = require('../utils/append_uuid');
+const uuid = require('uuid');
 const XLSX = require('xlsx');
 const fs = require('fs');
 
@@ -22,7 +23,7 @@ let json_data = {
     headers: [],
     date_index: -1,
     uf_index: -1,
-    state_index: -1
+    state_index: -1,
 };
 
 async function readXLSX() {
@@ -40,19 +41,21 @@ async function readXLSX() {
         });
         let data = await new Promise((resolve) => {
             console.log('Converting xlsx fileto json ...');
-            resolve(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {
+            let shetname = workbook.SheetNames[0];
+            resolve(XLSX.utils.sheet_to_json(workbook.Sheets[shetname], {
                 defval: null,
-                header: 1
+                header: 1,
             }));
         });
 
-        //headers
+        // headers
         json_data.headers = data[0].map(header => header.trim().replace(" ", "_").toLowerCase());
 
         // rows
         json_data.rows = data;
         json_data.rows.shift();
-        json_data.rows = append_uuid(json_data.rows);
+        // create a uuid for each row
+        json_data.rows = json_data.rows.map(row => [uuid.v4(), ...row]);
 
         // special data indexes 
         json_data.date_index = json_data.headers.findIndex(name => name === 'data');
@@ -75,7 +78,8 @@ async function readXLSX() {
 
                 //uncomment to clean only if 'NULL' or null or ''
                 //if (row[state_index] === 'NULL' || row[state_index] === null || row[state_index] === '') {        
-                row[json_data.state_index] = uf_to_state[row[json_data.uf_index]].toUpperCase();
+                row[json_data.state_index] =
+                    uf_to_state[row[json_data.uf_index]].toUpperCase();
                 //}
                 return row;
             });
@@ -114,35 +118,44 @@ async function checkOrCreateDatabase() {
 }
 
 async function seedTable(force) {
-    let result = await pool.query(`SHOW TABLES LIKE '${config.table_name}'`);
-    if (force && result.length === 1) {
-        console.log('Droping table.');
-        await pool.query(`DROP TABLE ${config.table_name}`);
-    } else {
-        let create_table_query = `CREATE TABLE ${config.table_name} (uuid VARCHAR(50) NOT NULL,
-            PRIMARY KEY (uuid)`;
+    try {
+        let table_found = await pool.query(`SHOW TABLES LIKE '${config.table_name}'`)
+            .then(result => result.length === 1);
 
-        json_data.headers.forEach((header, index) => {
-            let type = 'VARCHAR(50)';
-            let i = index + 1; //to acount for uuid
+        if (force && table_found) {
+            console.log('Droping table.');
+            await pool.query(`DROP TABLE ${config.table_name}`);
+            table_found = false;
+        }
 
-            // checking first entry to infer type
-            if (!isNaN(parseInt(json_data.rows[0][i]))) {
-                type = json_data.rows[0][i] % 1 == 0 ? 'INT' : 'FLOAT';
-            }
+        if (!table_found) {
+            console.log('Atempting to create table ...');
+            let create_table_query = `CREATE TABLE ${config.table_name} (uuid 
+                VARCHAR(50) NOT NULL, PRIMARY KEY (uuid)`;
 
-            if (json_data.date_index !== -1 && json_data.date_index === i) {
-                type = 'DATE';
-            }
+            json_data.headers.forEach((header, index) => {
+                let type = 'VARCHAR(50)';
+                let i = index + 1; //to acount for uuid
 
-            create_table_query += `,${header} ${type} NULL`;
-        });
+                // checking first entry to infer type
+                if (!isNaN(parseInt(json_data.rows[0][i]))) {
+                    type = json_data.rows[0][i] % 1 == 0 ? 'INT' : 'FLOAT';
+                }
 
-        create_table_query += ');';
+                if (json_data.date_index !== -1 && json_data.date_index === i) {
+                    type = 'DATE';
+                }
 
-        console.log('Atempting to create table ...');
-        await pool.query(create_table_query);
-        console.log('Table created succesfully.');
+                create_table_query += `,${header} ${type} NULL`;
+            });
+
+            create_table_query += ');';
+
+            await pool.query(create_table_query);
+            console.log('Table created succesfully.');
+        }
+    } catch (err) {
+        console.error('Error creating the table.', err);
     }
 
     //Seed
@@ -183,26 +196,33 @@ async function seedTable(force) {
     done = true;
 }
 
+function resetDB() {
+    done = false;
+    seeding = false;
+    database_ready = false;
+    data_ready = false;
+    reading = false;
+    preparing_database = false;
+    json_data = {
+        rows: [],
+        headers: [],
+        date_index: -1,
+        uf_index: -1,
+        state_index: -1,
+    };
+    Mock_Database.usereal();
+}
 
-async function seed(force = false) {
+async function seedDB(force) {
 
     if (!done && seeding) return Promise.resolve(false);
 
     if (force) {
-        done = false;
-        seeding = false;
-        database_ready = false;
-        data_ready = false;
-        reading = false;
-        preparing_database = false;
-        json_data = {
-            rows: [],
-            headers: [],
-            date_index: -1,
-            uf_index: -1,
-            state_index: -1
-        };
+        resetDB();
     }
+
+    if (done) return Promise.resolve(true);
+
     // read file if json data is empty and not reading already
     seeding = true;
     let readDataPromise = Promise.resolve(data_ready);
@@ -220,9 +240,13 @@ async function seed(force = false) {
     await Promise.all([readDataPromise, prepareDBPromise]);
     if (data_ready && database_ready) {
         await seedTable(force);
+    } else if (data_ready && !database_ready) {
+        console.log('Switching to in memory database');
+        Mock_Database.loadData(json_data);
+        done = true;
     }
     seeding = false;
     return done;
 }
 
-module.exports = seed;
+module.exports = seedDB;
