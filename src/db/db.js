@@ -65,10 +65,16 @@ const Mock_Database = {
                 throw new Error(`Can only query table: ${config.table_name}.`);
             }
             let requested = query_obj.columns === '*' ? this.headers : query_obj.columns;
-            let requested_indexes = requested.map(header => this.headers.findIndex(header));
+            let requested_indexes = requested.map(header => this.headers.indexOf(header));
 
             // for each row make a new row consisting of the values of the indexes
-            let response = this.data.rows.map(row => requested_indexes.map(index => row[index]));
+            let response = this.data.rows.map(row => {
+                let entry_object = {};
+                requested_indexes.map(index => {
+                    entry_object[this.headers[index]] = row[index];
+                });
+                return entry_object;
+            });
             return Promise.resolve(response);
             // filter and order
         } catch (err) {

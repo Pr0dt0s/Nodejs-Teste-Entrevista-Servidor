@@ -44,24 +44,17 @@ let defined_routes = [{
         parameters: {
             type: 'body/json',
             name: 'config',
-            description: `config object only with the parameters that will be updated available 
-            ---MySQL---
-            hostname
-            mysql_port
-            username
-            password
-            database_name
-            table_name
-            ---Excel parsing options---
-            replace_null
-            omit_null`,
+            description: 'config object only with the parameters that will be updated',
         },
     },
 ];
 
 function routes(app) {
 
-    app.get('/', (req, res) => res.status(200).json(defined_routes));
+    app.get('/api', (req, res) => {
+        res.status(200).json(defined_routes);
+        console.log("Responding to request at '/'");
+    });
 
     app.get("/api/seed_sql", (req, res) => {
 
@@ -106,6 +99,7 @@ function routes(app) {
     });
 
     app.get('/api/config', (req, res) => {
+        console.log('GET config');        
         res.json({
             hostname: config.hostname,
             mysql_port: config.mysql_port,
@@ -119,6 +113,7 @@ function routes(app) {
     });
 
     app.post('/api/config', (req, res) => {
+        console.log('POST config');
         let newconfig = req.body ? req.body.newconfig : false;
         if (newconfig) {
             config.updateConfig(newconfig);
